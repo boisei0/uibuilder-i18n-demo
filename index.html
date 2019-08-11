@@ -1,0 +1,159 @@
+<!doctype html>
+<!-- Note that adding an appcache really speeds things up after the first load
+    You need to amend the appcache file to meet your needs.
+    Don't forget to change the appcache file if you update ANY
+    of the files in it otherwise the old versions will ALWAYS be used.
+<html lang="en" manifest="./uibuilder.appcache">
+-->
+<html lang="en">
+<!--
+    This is the default, template html for uibuilder.
+    It is meant to demonstrate the use of VueJS & bootstrap-vue to dynamically
+    update the ui based on incoming/outgoing messages from/to the
+    Node-RED server.
+
+    You will want to alter this to suite your own needs. To do so,
+    copy this file to <userDir>/uibuilder/<url>/src.
+-->
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>Node-RED UI Builder</title>
+    <meta name="description" content="Node-RED UI Builder - VueJS + bootstrap-vue version">
+
+    <link rel="icon" href="./images/node-blue.ico">
+
+    <!-- See https://goo.gl/OOhYW5 -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#3f51b5">
+
+    <!-- Used if adding to homescreen for Chrome on Android. Fallback for manifest.json -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Node-RED UI Builder">
+
+    <!-- Used if adding to homescreen for Safari on iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Node-RED UI Builder">
+
+    <!-- Homescreen icons for Apple mobile use if required
+        <link rel="apple-touch-icon" href="./images/manifest/icon-48x48.png">
+        <link rel="apple-touch-icon" sizes="72x72" href="./images/manifest/icon-72x72.png">
+        <link rel="apple-touch-icon" sizes="96x96" href="./images/manifest/icon-96x96.png">
+        <link rel="apple-touch-icon" sizes="144x144" href="./images/manifest/icon-144x144.png">
+        <link rel="apple-touch-icon" sizes="192x192" href="./images/manifest/icon-192x192.png">
+    -->
+
+    <link type="text/css" rel="stylesheet" href="../uibuilder/vendor/bootstrap/dist/css/bootstrap.min.css" />
+    <link type="text/css" rel="stylesheet" href="../uibuilder/vendor/bootstrap-vue/dist/bootstrap-vue.css" />
+    
+    <link rel="stylesheet" href="./index.css" media="all">
+</head>
+<body>
+    <div id="app">
+        <b-container id="app_container">
+            <div class="locale-changer">
+                {{ $t('ui.lang.language') }}: <select v-model="$i18n.locale">
+                    <option value="en-GB" selected>🇬🇧 - {{ $t('ui.lang.english') }}</option>
+                    <option value="nl-NL">🇳🇱 - {{ $t('ui.lang.dutch') }}</option>
+                </select><br />
+                <br />
+            </div>
+            
+            <b-img src="./images/node-blue-192x192.png" rounded left v-bind="imgProps" alt="Blue Node-RED" class="mt-1 mr-2"></b-img>
+            <h1>
+                {{ $t('ui.intro.header') }}
+            </h1>
+            <i18n path="ui.intro.text" tag="p">
+                <a place="vueUrl" href="https://vuejs.org/">Vue.js</a>
+                <a place="uibuilderUrl" href="https://github.com/TotallyInformation/node-red-contrib-uibuilder">node-red-contrib-uibuilder</a>
+            </i18n>
+
+            <h2>{{ $t('ui.form.header') }}</h2>
+            <b-form class="border p-3 m-2">
+                <i18n path="ui.form.textIntro" tag="p">
+                    <code place="increment">increment</code>
+                    <code place="file">index.js</code>
+                </i18n>
+                <p>
+                    <b-form-input v-model="inputText" type="text" :placeholder="$t('ui.form.inputPlaceholder')"></b-form-input><br />
+                    <b-form-checkbox v-model="inputChkBox">
+                        {{ $t('ui.form.checkbox') }}
+                    </b-form-checkbox><br />
+                    <b-button pill variant="primary" v-on:click="increment">{{ $t('ui.form.increment') }}</b-button>
+                        &nbsp;&nbsp;{{ $t('ui.form.clickCounter') }}: <b>{{counterBtn}}</b>.
+                </p>
+                <p>{{ $t('ui.form.outroText') }}</p>
+            </b-form>
+
+            <h2>{{ $t('ui.dynData.header') }}</h2>
+            <p>{{ $t('ui.dynData.intro[0]') }}</p>
+            <i18n path="ui.dynData.intro[1]" tag="p">
+                <code place="mounted">mounted</code>
+                <code place="file">index.js</code>
+            </i18n>
+
+            <b-card class="mt-3" :header="$t('ui.dynData.status.header')" border-variant="info" header-bg-variant="info" header-text-variant="white" align="center" >
+                <i18n path="ui.dynData.status.socketIO" tag="p" class="float-left">
+                    <b place="state">{{ socketConnectedState }}</b>
+                </i18n>
+                <i18n path="ui.dynData.status.timeDiff" tag="p" class="float-right">
+                    <b place="offset">{{ serverTimeOffset }}</b>
+                </i18n>
+            </b-card>
+
+            <b-card class="mt-3" :header="$t('ui.dynData.normalMessages.header')" border-variant="primary" header-bg-variant="primary" header-text-variant="white" align="left" >
+                <i18n path="ui.dynData.normalMessages.intro" tag="p">
+                    <b place="msgsReceived">{{ msgsReceived }}</b>
+                    <b place="msgsSent">{{ msgsSent }}</b>
+                </i18n>
+                <pre v-html="hLastRcvd" class="syntax-highlight"></pre>
+                <pre v-html="hLastSent" class="syntax-highlight"></pre>
+                <p slot="footer" class="mb-0">
+                    {{ $t('ui.dynData.normalMessages.footer')}}
+                </p>
+            </b-card>
+
+            <b-card class="mt-3" :header="$t('ui.dynData.controlMessages.header')" border-variant="secondary" header-bg-variant="secondary" header-text-variant="white" align="left" >
+                <i18n path="ui.dynData.controlMessages.intro" tag="p">
+                    <b place="msgsCtrlReceived">{{ msgsControl }}</b>
+                    <b place="msgsCtrlSent">{{ msgsCtrlSent }}</b>
+                </i18n>
+                <pre v-html="hLastCtrlRcvd" class="syntax-highlight"></pre>
+                <pre v-html="hLastCtrlSent" class="syntax-highlight"></pre>
+                <i18n path="ui.dynData.controlMessages.footer" tag="p" slot="footer" class="mb-0">
+                    <code place="from">from</code>
+                </i18n>
+            </b-card>
+
+        </b-container>
+    </div>
+
+    <!-- These MUST be in the right order. Note no leading / -->
+    <!-- REQUIRED: Socket.IO is loaded only once for all instances
+                     Without this, you don't get a websocket connection -->
+    <script src="../uibuilder/vendor/socket.io/socket.io.js"></script>
+
+    <!-- --- Vendor Libraries - Load in the right order --- -->
+    <script src="../uibuilder/vendor/vue/dist/vue.js"></script> <!-- dev version with component compiler -->
+    <!-- <script src="../uibuilder/vendor/vue/dist/vue.min.js"></script>   prod version with component compiler -->
+    <!-- <script src="../uibuilder/vendor/vue/dist/vue.runtime.min.js"></script>   prod version without component compiler -->
+    
+    <!-- i18n library -->
+    <script src="../uibuilder/vendor/vue-i18n/dist/vue-i18n.js"></script>
+    
+    <!-- Bootstrap-Vue -->
+    <script src="../uibuilder/vendor/bootstrap-vue/dist/bootstrap-vue.js"></script>
+
+    <!-- REQUIRED: Sets up Socket listeners and the msg object -->
+    <!-- <script src="./uibuilderfe.js"></script>   //dev version -->
+    <script src="./uibuilderfe.min.js"></script> <!--    //prod version -->
+    
+    <!-- OPTIONAL: You probably want this. Put your custom code here -->
+    <script src="./index.js"></script>
+
+</body>
+
+</html>
